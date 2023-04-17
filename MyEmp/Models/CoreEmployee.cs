@@ -9,7 +9,7 @@ namespace MyEmp.Models
         [Key]
         public int Id { get; set; }
         public string? Name { get; set; }
-        public string? DOJ { get; set; }
+        public string ? DOJ { get; set; }
         public int StateId { get; set; }
         public string? Gender { get; set; }
 
