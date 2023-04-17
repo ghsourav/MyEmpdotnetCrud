@@ -6,6 +6,7 @@ using MyEmp.ViewModel;
 using NuGet.Protocol;
 using System;
 using System.Drawing;
+using System.Globalization;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace MyEmp.Controllers
@@ -300,7 +301,15 @@ namespace MyEmp.Controllers
 
                     var state = _contextAccessor.CoreStates.FirstOrDefault(x => x.StateName == addEmp.StateName);
                     employee.Name = addEmp.Name;
-                    employee.DOJ = addEmp.DOJ;
+                   
+                    employee.DOJ=addEmp.DOJ;
+                    //if (addEmp.DOJ != null) {
+                    //    employee.DOJ = DateTime.ParseExact(addEmp.DOJ, "dd-MM-yyyy", CultureInfo.InvariantCulture);
+                    //}
+                    //else
+                    //{
+                    //    throw new InvalidOperationException("Not vailed date");
+                    //}
                     employee.Gender = addEmp.gender;
                     if (state != null)
                     {
