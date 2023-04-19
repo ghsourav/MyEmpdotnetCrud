@@ -1,13 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using MyEmp.Context;
 using MyEmp.Models;
 using MyEmp.ViewModel;
-using NuGet.Protocol;
-using System;
-using System.Drawing;
-using System.Globalization;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace MyEmp.Controllers
 {
@@ -24,7 +18,7 @@ namespace MyEmp.Controllers
 
         [HttpGet("techenable")]
 
-        public async Task<IActionResult> GetAllonlyTechDetails()
+        public async Task<IActionResult> GetAllOnlyTechDetails()
         {
             try
             {
@@ -45,28 +39,21 @@ namespace MyEmp.Controllers
                                        }).ToList();
 
                 if (employeeDetails.Count == 0)
-                {
                     return NotFound("No Data Found");
-                }
                 else
-                {
                     return Ok(employeeDetails);
-                }
-             
-            }catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
         }
 
         [HttpGet("{Id}")]
-        public async Task<IActionResult> GetbyId(int Id)
+        public async Task<IActionResult> GetById(int Id)
         {
             try
             {
-
-
-                Console.WriteLine(Id);
                 var employeeDetails = (from emp in _contextAccessor.CoreEmployees
                                        join state in _contextAccessor.CoreStates on emp.StateId equals state.Id
                                        join empTech in _contextAccessor.CoreEmpTeches on emp.Id equals empTech.Employee_Id into empTechGroup
@@ -86,13 +73,10 @@ namespace MyEmp.Controllers
                                        }).ToList();
 
                 if (employeeDetails.Count == 0)
-                {
                     return NotFound($"Employee id {Id} not Found");
-                }
                 else
-                {
                     return Ok(employeeDetails);
-                }
+
             }
             catch (Exception ex)
             {
@@ -114,7 +98,7 @@ namespace MyEmp.Controllers
                                        join empTech in _contextAccessor.CoreEmpTeches on emp.Id equals empTech.Employee_Id into empTechGroup
                                        from empTech in empTechGroup.DefaultIfEmpty()
                                        join tech in _contextAccessor.CoreTechNames on empTech.Tech_ID equals tech.Id into techGroup
-                                       from tech in techGroup.DefaultIfEmpty()                         
+                                       from tech in techGroup.DefaultIfEmpty()
                                        group tech by new { emp.Id, emp.Name, emp.DOJ, emp.Gender, state.StateName } into g
                                        select new
                                        {
@@ -125,15 +109,10 @@ namespace MyEmp.Controllers
                                            gender = g.Key.Gender,
                                            TechNames = g.Where(t => t != null).Select(t => t.Tech_Name).ToArray(),
                                        }).ToList();
-
                 if (employeeDetails.Count == 0)
-                {
                     return NotFound("No Data Found");
-                }
                 else
-                {
                     return Ok(employeeDetails);
-                }
             }
             catch (Exception ex)
             {
@@ -146,41 +125,34 @@ namespace MyEmp.Controllers
         }
 
         [HttpGet("techenable/{id}")]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<IActionResult> GetbyId(int id)
         {
             try
             {
-                var res=new object();
                 var employeeDetails = (from emp in _contextAccessor.CoreEmployees
-                                                         join state in _contextAccessor.CoreStates on emp.StateId equals state.Id
-                                                        join empTech in _contextAccessor.CoreEmpTeches on emp.Id equals empTech.Employee_Id
-                                                        join tech in _contextAccessor.CoreTechNames on empTech.Tech_ID equals tech.Id
-                                                        where emp.Id == id && empTech.Employee_Id == id && empTech.Is_active == true
-                                                        group tech by new { emp.Id,emp.Name,emp.DOJ,emp.Gender,state.StateName } into g
-                                       select new{
+                                       join state in _contextAccessor.CoreStates on emp.StateId equals state.Id
+                                       join empTech in _contextAccessor.CoreEmpTeches on emp.Id equals empTech.Employee_Id
+                                       join tech in _contextAccessor.CoreTechNames on empTech.Tech_ID equals tech.Id
+                                       where emp.Id == id && empTech.Employee_Id == id && empTech.Is_active == true
+                                       group tech by new { emp.Id, emp.Name, emp.DOJ, emp.Gender, state.StateName } into g
+                                       select new
+                                       {
                                            g.Key.Id,
-                                           Name=g.Key.Name,
-                                           Doj=g.Key.DOJ,
+                                           Name = g.Key.Name,
+                                           Doj = g.Key.DOJ,
                                            StateName = g.Key.StateName,
                                            gender = g.Key.Gender,
                                            TechNames = g.Select(t => t.Tech_Name).ToArray()
                                        }).ToList();
 
-
-                if(employeeDetails!=null && employeeDetails.Count>0)
-                {
+                if (employeeDetails != null && employeeDetails.Count > 0)
                     return Ok(employeeDetails);
-
-                }
                 else
-                {
                     return NotFound($"Employee {id} is Not Found");
-                }
-
             }
             catch (Exception ex)
             {
-                
+
                 return BadRequest(new
                 {
                     Message = ex.Message,
@@ -191,101 +163,87 @@ namespace MyEmp.Controllers
 
         [HttpPut]
 
-        public async Task<IActionResult> UpdateCoreEmplyee([FromBody] CrudPostViewModel addEmp)
+        public async Task<IActionResult> UpdateCoreEmplyee(CrudPostViewModel addEmp)
         {
             using (var transaction = _contextAccessor.Database.BeginTransaction())
             {
-                string Res = "";
-                string[] addedTechs = new string[] { };
+                string responseMessage = "";
+                List<string> invalidTechs = new List<string>();
                 try
                 {
+                    bool updateSuccessful = true;
                     var employee = _contextAccessor.CoreEmployees.FirstOrDefault(e => e.Id == addEmp.Id);
                     if (employee == null)
                     {
-                        string ErrorMsg = $"Sorry unable to find Employee Id {addEmp.Id}";
-                        Res = ErrorMsg;
-                        return NotFound(ErrorMsg);
-                        throw new InvalidOperationException(ErrorMsg);
+                        string errorMsg = $"Sorry unable to find Employee Id {addEmp.Id}";
+                        updateSuccessful = false;
+                        responseMessage = errorMsg;
+                        throw new InvalidOperationException(errorMsg);
                     }
-
                     var state = _contextAccessor.CoreStates.FirstOrDefault(x => x.StateName == addEmp.StateName);
-                    employee.Name = addEmp.Name;
-                    employee.DOJ = addEmp.DOJ;
-                    employee.Gender = addEmp.gender;
                     if (state != null)
-                    {
                         employee.StateId = state.Id;
+                    else
+                    {
+                        updateSuccessful = false;
+                        responseMessage = $"Invailed State entered {addEmp.StateName}";
+                        throw new InvalidOperationException($"Invailed State entered {addEmp.StateName}");
+                    }
+                    if (updateSuccessful)
+                    {
+                        employee.Name = addEmp.Name;
+                        employee.Gender = addEmp.gender;
+                        employee.DOJ = addEmp.DOJ;
+                        _contextAccessor.SaveChanges();
+                        _contextAccessor.CoreEmpTeches.Where(e => e.Employee_Id == addEmp.Id).ToList().ForEach(e => _contextAccessor.CoreEmpTeches.Remove(e));
+                    }
+                    if (addEmp.TechNames.Length != 0)
+                    {
+                        foreach (var techName in addEmp.TechNames)
+                        {
+                            var techId = _contextAccessor.CoreTechNames.FirstOrDefault(x => x.Tech_Name == techName);
+                            if (techId != null && updateSuccessful)
+                            {
+                                var techObj = new CoreEmpTech { Employee_Id = employee.Id, Tech_ID = techId.Id, Is_active = true };
+                                _contextAccessor.Add(techObj);
+                                _contextAccessor.SaveChanges();
+                                invalidTechs.Add(techName);
+                                responseMessage = $"Employee {addEmp.Id} Details Updated";
+                            }
+                            else
+                            {
+                                var remainingTech = addEmp.TechNames.Except(invalidTechs);
+                                string remainingTechnames = string.Join(", ", remainingTech);
+                                if (techId == null)
+                                    responseMessage = $"Your entered wrong tech details {remainingTechnames} ";
+                                throw new InvalidOperationException($"Wrong tech details {remainingTechnames}");
+                            }
+
+                        }
                     }
                     else
                     {
-                        Res = $"Invailed State entered {addEmp.StateName}";
-                        throw new InvalidOperationException("Wrong State name Provied");
-
-                        
-                    }
-                  //  _contextAccessor.Add(Employee);
-                    var saved = _contextAccessor.SaveChanges();
-
-                    //Console.WriteLine(saved);
-                    //var lastEmpId = _contextAccessor.CoreEmployees.OrderByDescending(e => e.Id)
-                    //     .Select(e => e.Id)
-                    //       .FirstOrDefault();
-                    _contextAccessor.CoreEmpTeches.Where(e => e.Employee_Id == addEmp.Id).ToList().ForEach(e=> _contextAccessor.CoreEmpTeches.Remove(e));
-                    foreach (var techname in addEmp.TechNames)
-                    {
-                        var techId = _contextAccessor.CoreTechNames.FirstOrDefault(x => x.Tech_Name == techname);
-                        if (techId != null)
-                        {
-                            var techObj = new CoreEmpTech { Employee_Id = employee.Id, Tech_ID = techId.Id, Is_active = true };
-
-                            _contextAccessor.Add(techObj);
-                            _contextAccessor.SaveChanges();
-                            Array.Resize(ref addedTechs, addedTechs.Length + 1);
-                            addedTechs[addedTechs.Length - 1] = techname;
-                            Res = $"Employee {addEmp.Id} Details Updated";
-                        }
-                        else
-                        {
-                            var remainingData = addEmp.TechNames.Except(addedTechs);
-                            string remainingDataString = string.Join(", ", remainingData);
-                            if (techId == null )
-                            {
-                                Res = $"Your entered wrong tech details {remainingDataString} ";
-                            }
-                            else if (state == null)
-                            {
-                                Res = $"Your entered  wrong state {addEmp.StateName}";
-                            }
-                            else if (techId == null)
-                            {
-                                Res = $"Your entered wrong tech details {remainingDataString} ";
-
-                            }
-                            throw new InvalidOperationException($"Wrong tech details {remainingDataString}");
-                        //   transaction.Rollback();
-
-                        }
-
+                        //  _contextAccessor.CoreEmpTeches.Where(e => e.Employee_Id == addEmp.Id).ToList().ForEach(e => _contextAccessor.CoreEmpTeches.Remove(e));
+                        _contextAccessor.SaveChanges();
+                        responseMessage = $"Employee {addEmp.Id} Details Updated";
                     }
                     transaction.Commit();
                     return Ok(new
                     {
-                        Message = Res,
+                        Message = responseMessage,
                     });
                 }
                 catch (Exception ex)
                 {
                     transaction.Rollback();
-                    Console.WriteLine(ex.Message);
                     return BadRequest(new
                     {
-                        Message = Res,
+                        Message = responseMessage,
                     });
 
                 }
             }
         }
-
 
         [HttpPost]
 
@@ -293,94 +251,71 @@ namespace MyEmp.Controllers
         {
             using (var transaction = _contextAccessor.Database.BeginTransaction())
             {
-                string Res = "";
-                string[] addedTechs = new string[] { };
+                string responseMessage = "";
+                List<string> invalidTechs = new List<string>();
                 try
                 {
                     var employee = new CoreEmployee();
-
+                    bool addSuccessfully = true;
+                    
                     var state = _contextAccessor.CoreStates.FirstOrDefault(x => x.StateName == addEmp.StateName);
-                    employee.Name = addEmp.Name;
-                   
-                    employee.DOJ=addEmp.DOJ;
-                    //if (addEmp.DOJ != null) {
-                    //    employee.DOJ = DateTime.ParseExact(addEmp.DOJ, "dd-MM-yyyy", CultureInfo.InvariantCulture);
-                    //}
-                    //else
-                    //{
-                    //    throw new InvalidOperationException("Not vailed date");
-                    //}
-                    employee.Gender = addEmp.gender;
-                    if (state != null)
+                    if (state != null) employee.StateId = state.Id;
+                    else
                     {
-                        employee.StateId = state.Id;
+                        addSuccessfully = false;
+                        responseMessage = $"Invailed State entered {addEmp.StateName} ";
+                        throw new InvalidOperationException($"Invailed State entered {addEmp.StateName} ");
+                    }
+                    if (addSuccessfully)
+                    {
+                        employee.Name = addEmp.Name;
+                        employee.DOJ = addEmp.DOJ;
+                        employee.Gender = addEmp.gender;
+                        _contextAccessor.Add(employee);
+                        _contextAccessor.SaveChanges();
+                    }
+                    if (addEmp.TechNames.Length > 0)
+                    {
+                        foreach (var techName in addEmp.TechNames)
+                        {
+                            var techId = _contextAccessor.CoreTechNames.FirstOrDefault(x => x.Tech_Name == techName);
+                            if (techId != null && addSuccessfully)
+                            {
+                                var techObj = new CoreEmpTech { Employee_Id = employee.Id, Tech_ID = techId.Id, Is_active = true };
+                                _contextAccessor.Add(techObj);
+                                _contextAccessor.SaveChanges();
+                                invalidTechs.Add(techName);
+                                responseMessage = "Details Added";
+                            }
+                            else
+                            {
+                                var remainingTech = addEmp.TechNames.Except(invalidTechs);
+                                string remainingtechnameString = string.Join(", ", remainingTech);
+                                if (techId == null)
+                                {
+                                    responseMessage = $"Your entered wrong tech details {remainingtechnameString}";
+                                }
+                                throw new InvalidOperationException($"Wrong tech details {remainingtechnameString}");
+                            }
+                        }
                     }
                     else
                     {
-                        Res = $"Invailed State entered {addEmp.StateName}";
-                        throw new InvalidOperationException("Wrong State name Provied");
-
-                        ;
-                    }
-                    _contextAccessor.Add(employee);
-                    _contextAccessor.SaveChanges();
-
-
-                  
-                    //Console.WriteLine(saved);
-                   // var lastEmpId= _contextAccessor.CoreEmployees.OrderByDescending(e => e.Id)
-                   //      .Select(e => e.Id)
-                   //        .FirstOrDefault();
-
-                    foreach (var techname in addEmp.TechNames)
-                    {
-                        var techId= _contextAccessor.CoreTechNames.FirstOrDefault(x => x.Tech_Name == techname);
-                       
-                        if (techId != null)
-                        {
-                            var techObj = new CoreEmpTech { Employee_Id = employee.Id, Tech_ID = techId.Id, Is_active = true };
-                            _contextAccessor.Add(techObj);
-                            _contextAccessor.SaveChanges();
-                            Array.Resize(ref addedTechs, addedTechs.Length + 1);
-                            addedTechs[addedTechs.Length - 1] = techname;
-                            Res = "Details Added";
-                        }
-                        else
-                        {
-                            var remainingData = addEmp.TechNames.Except(addedTechs);
-                            string remainingDataString = string.Join(", ", remainingData);
-                            if (techId == null && state == null)
-                            {
-                                Res = $"Your entered wrong tech details {remainingDataString} and wrong state {addEmp.StateName}";
-                            }else if(state == null)
-                            {
-                                Res = $"Your entered  wrong state {addEmp.StateName}";
-                            }
-                            else if (techId == null)
-                            {
-                                Res = $"Your entered wrong tech details {remainingDataString} and wrong state {addEmp.StateName}";
-
-                            }
-                            throw new InvalidOperationException($"Wrong tech details {remainingDataString}");
-
-                        }
-
+                        responseMessage = "Details Added.";
                     }
                     transaction.Commit();
                     return Ok(new
                     {
-                        Message = Res,
+                        Message = responseMessage,
                     });
                 }
                 catch (Exception ex)
                 {
                     transaction.Rollback();
-                    Console.WriteLine(ex.Message);
                     return BadRequest(new
                     {
-                        Message = Res,
+                        Message = responseMessage,
                     });
-                    
                 }
             }
         }
